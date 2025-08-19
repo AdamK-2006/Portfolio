@@ -1,9 +1,0 @@
-1a) If using sharepoint on web, download capsule-zip zip folder, should go to downloads on computer
-1b) if using sharepoint through computer folder, simply copy the capsule-zip zip folder and paste in a different folder (for instance downloads)
-2) Extract project zip folder (right click on zip -> extract all -> extract)
-3) On chrome, go to extensions (top right) -> manage extensions
-4) Remove the current CapsuleDoc generator extension, should be a button with blue text saying "Remove"
-5) Click on load unpacked (top left)
-6) Select the extracted capsule-zip folder in downloads (not the zipped one, also make sure to only single click so as not to go into it)
-
-Extension should be ready
