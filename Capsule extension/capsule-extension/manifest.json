@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "CapsuleDoc Generator",
+  "version": "1.0",
+  "description": "Generate Word documents from Capsule CRM data",
+  "permissions": ["scripting", "activeTab"],
+  "host_permissions": ["https://*.capsulecrm.com/*"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.capsulecrm.com/party/*"],
+      "js": ["pizzip.min.js", "docxtemplater.min.js", "FileSaver.min.js", "content.js"],
+      "css": ["styles/button.css", "styles/dropdown.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+      
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["templates/*.docx", "http://localhost/*", "styles/*.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

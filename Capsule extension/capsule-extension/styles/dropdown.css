@@ -1,0 +1,9 @@
+.ext_dropdown {
+    padding: 5px;
+    font-size: 14px;
+    max-width: 275px;
+    text-overflow: "ellipsis";
+    transform: translateX(10px);
+    border-radius: 8px;
+    margin-top: 5px;
+}

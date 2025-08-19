@@ -1,0 +1,18 @@
+.ext_button {
+  background-color: #443cff;
+  color: white;
+  transform: translateX(10px);
+  border-radius: 8px;
+  border: none;
+  padding: 8px 14px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size:14px;
+  cursor: pointer;
+  transition: background-color 0.5s ease;
+}
+
+.ext_button:hover {
+  background-color: #4034e4;
+}
