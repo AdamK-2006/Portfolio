@@ -1,0 +1,4 @@
+1) add {ref}, {name}, {company}, {address}, {post}, {mobile}, {land}, {email} to document in this exact fashion in areas required.
+2) if there is only one contact number needed, use {mobile}, unless you definitely just want a landline there (no mobile), then use {land}
+3) ensure document is of type .docx
+2) add documents to 'templates' folder in server (on wordpress server, directory is /var/www/capsule-flask/templates), for shaul
