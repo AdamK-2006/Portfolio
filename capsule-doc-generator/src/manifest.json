@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.capsulecrm.com/party/*"],
-      "js": ["pizzip.min.js", "docxtemplater.min.js", "FileSaver.min.js", "content.js"],
+      "js": ["utils/pizzip.min.js", "utils/docxtemplater.min.js", "utils/FileSaver.min.js", "content.js"],
       "css": ["styles/button.css", "styles/dropdown.css"],
       "run_at": "document_idle",
       "all_frames": false
@@ -23,7 +23,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["templates/*.docx", "http://localhost/*", "styles/*.css"],
+      "resources": ["http://localhost/*", "styles/*.css"],
       "matches": ["<all_urls>"]
     }
   ]

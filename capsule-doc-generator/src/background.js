@@ -5,7 +5,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url.match(/https:\/\/.*\.capsulecrm\.com\/party\//)) {
     chrome.scripting.executeScript({
       target: { tabId: tabId },
-      files: ["pizzip.min.js", "docxtemplater.min.js", "FileSaver.min.js", "content.js"]
+      files: ["utils/pizzip.min.js", "utils/docxtemplater.min.js", "utils/FileSaver.min.js", "content.js"]
     });
   }
 });

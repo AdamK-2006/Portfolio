@@ -1,5 +1,6 @@
-console.log("Hello")
-let leftLayout = "body > div.app > div.app__main > div > div.entity-layout__main > div.entity-layout__left";
+console.log("Hello");
+window.leftLayout = "body > div.app > div.app__main > div > div.entity-layout__main > div.entity-layout__left";
+
 
 //Function for injecting button
 function injectButton(target) {
@@ -50,7 +51,7 @@ async function injectDropdown(target) {
   const ext = "/flask/templates";
 
   const files = await loadTemplates(BASE_URL + ext);
-  const business = document.querySelector(leftLayout + " > div.panel.contacts-panel");
+  const business = document.querySelector(window.leftLayout + " > div.panel.contacts-panel");
 
   let newFiles = [];
   let index = 0;
@@ -96,8 +97,8 @@ function extractData() {
   try {
     //extracts name
     const namePath = "div:nth-child(1) > div > div.party-details.primary-party-details > div.party-details__text > span";
-    const nameEl = document.querySelector(leftLayout + " > " + namePath);
-    if (!document.querySelector(leftLayout + "div.panel.contacts-panel")){
+    const nameEl = document.querySelector(window.leftLayout + " > " + namePath);
+    if (!document.querySelector(window.leftLayout + "div.panel.contacts-panel")){
       const nameArr = nameEl?.textContent?.trim().split(/\r?\n/);
       if (nameArr.length > 1)
         name = nameArr[1].trim();
@@ -106,7 +107,7 @@ function extractData() {
     } else {
       company = nameEl?.textContent?.trim();
       const contactPanel = "div.panel.contacts-panel > div.panel__content > ul";
-      const contact = document.querySelector(leftLayout + " > " + contactPanel);
+      const contact = document.querySelector(window.leftLayout + " > " + contactPanel);
       if (contact) {
         const contactNameEl = document.querySelector(contactPanel + " > li:nth-child(1) > div.contacts-panel__item-container > a")
         const nameArr = contactNameEl?.textContent?.trim().split(/\r?\n/);
@@ -122,7 +123,7 @@ function extractData() {
     if (!company)
       company = "-";
     //list of contact info, includes phone, email and address in that order
-    const ul = document.querySelector(leftLayout + " > div:nth-child(1) > div > ul");
+    const ul = document.querySelector(window.leftLayout + " > div:nth-child(1) > div > ul");
     const ulLen = ul ? ul.querySelectorAll("li").length : 0;
     if (!ul) {
       alert("No contact details found on page");
@@ -135,7 +136,7 @@ function extractData() {
     const detailsList = "div:nth-child(1) > div > ul";
     detailsItemPath = "div > div.copy__contents.contact-detail__detail";
     for (let i = 1; i <= ulLen; i++) {
-      let currentElem = document.querySelector(leftLayout + " > " + detailsList + " > li:nth-child("+i+") > " + detailsItemPath);
+      let currentElem = document.querySelector(window.leftLayout + " > " + detailsList + " > li:nth-child("+i+") > " + detailsItemPath);
       let current = currentElem?.textContent?.trim()
       if (current.substring(0, 1) == "0") {
         if (current.substring(0, 2) == "07" && mobile == "-" && !current.includes("@") && !current.includes("."))
@@ -148,7 +149,7 @@ function extractData() {
       }
     }
 
-    const addressElem = document.querySelector(leftLayout + " > " + detailsList + " > li:nth-child("+ulLen+") > " + detailsItemPath);
+    const addressElem = document.querySelector(window.leftLayout + " > " + detailsList + " > li:nth-child("+ulLen+") > " + detailsItemPath);
     address = addressElem?.textContent?.trim();
     if (!address)
       address = "-";
