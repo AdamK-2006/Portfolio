@@ -1,5 +1,5 @@
 # Capsule Document Generator
-Note: This extension was built specifically for internal use at WideFM and is not intended for general use.\
+Note: This extension was built specifically for internal use at **WideFM** and is not intended for general use.\
 \
 This project is a Google extension that extracts customer information from Capsule (A customer information base) and generates a contract document from a list of templates specified by the user. 
 
@@ -32,7 +32,7 @@ With this extension, users can instead select which template they would like to 
 ## Features
 #### Extension
 - Button that looks identical to other buttons found on the page, seamless design.
-- Dropdown for selecting templates created by WideFM.
+- Dropdown for selecting templates.
 #### Template & Backend
 - Templates found on an internal server.
 - Meaningfully named tags for customer information inserted on each template, e.g. {name}, {address}, {post}, {mobile} etc.
@@ -41,5 +41,5 @@ With this extension, users can instead select which template they would like to 
   * Another that returns a list of template names, this is for the dropdown menu.
 
 ## License
-This project is proprietary and was developed for internal use at WideFM. A license will be specified if released for public use.
+This project is proprietary and was developed for internal use at **WideFM**. A license will be specified if released for public use.
 
