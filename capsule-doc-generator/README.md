@@ -27,7 +27,16 @@ With this extension, users can instead select which template they would like to 
 2) Navigate to a person/organisation `https://widefm.capsulecrm.com/party/*`.
 3) The button and dropdown can be found on the left hand side under the customer information.
 ##### View of Contact page:
-<img width="1904" height="829" alt="image" src="https://github.com/user-attachments/assets/6efb3e1d-b343-477e-85b6-0c4f9bbbf412" />
+<img width="1529" height="883" alt="image" src="https://github.com/user-attachments/assets/d56d9e07-d7a2-4dea-a9f3-0c2e2e61d7a9" />
+
+##### View of Dropdown:
+<img width="1535" height="868" alt="image" src="https://github.com/user-attachments/assets/51ce44fe-416d-4007-8f51-106ba1e41caa" />
+
+##### View of Template after generation:
+<img width="829" height="902" alt="image" src="https://github.com/user-attachments/assets/1cc33e5c-846a-49d3-ab20-f9056fdabcab" />
+
+
+
 
 ## Features
 #### Extension
