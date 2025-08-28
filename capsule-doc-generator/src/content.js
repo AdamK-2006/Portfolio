@@ -1,4 +1,3 @@
-console.log("Hello");
 window.leftLayout = "body > div.app > div.app__main > div > div.entity-layout__main > div.entity-layout__left";
 
 
