@@ -1,9 +1,11 @@
 import numpy as np
 
 class FCN:
-    layers = []
-    def __init__(self):
-        pass
+    def __init__(self, layers):
+        self.layers = []
+        for layer in layers:
+            self.add_layer(layer)
+        print("FCN initialized")
 
     def add_layer(self, layer):
         if len(self.layers) > 0:
@@ -12,6 +14,7 @@ class FCN:
 
 class Layer:
     def __init__(self, neurons, activation = None):
+        # Layer initialized with array of activations, neuron count and activation function name
         self.n = neurons
         self.a_vals = np.empty(neurons)
 
