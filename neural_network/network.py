@@ -3,11 +3,13 @@ import numpy as np
 # fully connected network code
 
 class FCN:
-    def __init__(self, layers, loss = "mse"):
+    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse"):
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
         self.loss = loss
+        self.learning_rate = learning_rate
+        self.optimizer = optimizer
         print("FCN initialized")
 
     def add_layer(self, layer):
@@ -16,14 +18,13 @@ class FCN:
         self.layers.append(layer)
 
     def train(self, X, y_true):
-        for item, true in zip(X[:5], y_true[:5]):
-            print("Running forward pass...")
+        for item, true in zip(X, y_true):
             y_pred = self.forward_pass(item)
-            print(y_pred)
             print("Loss: " + str(self.loss_func(y_pred, true)))
 
             self.backward_pass(true)
-            print("--------------------")
+
+            self.sgd()
 
 
     def forward_pass(self, item):
@@ -60,6 +61,10 @@ class FCN:
     def cross_entropy(self, y_pred, y_true):
         return -np.sum(y_true * np.log(y_pred))
 
+    # TO DO!!!
+    def cross_entropy_derivative(self, y_pred, y_true):
+        return -(y_true / (y_pred + 1e-8))
+
     def loss_func(self, y_pred, y_true):
         funcs = {
         'mse': self.mse,
@@ -76,6 +81,13 @@ class FCN:
 
         return funcs[self.loss](y_pred, y_true)
 
+    # optimizer code
+
+    def sgd(self):
+        for layer in self.layers[1:]:
+            layer.weights = layer.weights - (self.learning_rate * layer.dW)
+            layer.biases = layer.biases - (self.learning_rate * layer.db)
+
 # layer code
 
 class Layer:
@@ -83,15 +95,13 @@ class Layer:
         # Layer initialized with array of activations, neuron count and activation function name
         self.n = neurons
         self.a_vals = np.empty(neurons)
-
-        if activation != None:
-            self.activation = activation
+        self.activation = activation
 
     def initialize(self, n_prev):
         self.z_vals = np.empty(self.n)
         self.weights = np.random.randn(self.n, n_prev) * 0.01
         self.biases = np.zeros(self.n)
-        self.dW = np.empty(self.n, n_prev)
+        self.dW = np.empty((self.n, n_prev))
         self.db = np.empty(self.n)
     
     # activation function code
@@ -113,12 +123,12 @@ class Layer:
         if self.activation == 'softmax':
             return self.softmax_derivative(self.a_vals, dL_da)
         
-        return dL_da * funcs[self.activation](self.a_vals)
+        return dL_da * funcs[self.activation](self.z_vals)
     
     def relu(self, data):
         return np.maximum(0, data)
-    #def relu_derivative(self, data):
-    #    return np.maximum(0, data)
+    def relu_derivative(self, data):
+        return (data > 0).astype(float)
     
     def softmax(self, data):
         e = np.exp(data - np.max(data))
