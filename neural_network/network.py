@@ -17,17 +17,30 @@ class FCN:
             layer.initialize(self.layers[len(self.layers)-1].n)
         self.layers.append(layer)
 
-    def train(self, X, y_true):
-        for item, true in zip(X, y_true):
-            y_pred = self.forward_pass(item)
-            print("Loss: " + str(self.loss_func(y_pred, true)))
+    def train(self, X, y_true, X_val = None, y_val = None, epochs=10):
+        epoch_losses = {"train": [], "val": []}
+        for epoch in range(epochs):
+            total_loss = 0
+            for item, true in zip(X, y_true):
+                y_pred = self.predict(item)
+                total_loss += self.loss_func(y_pred, true)
 
-            self.backward_pass(true)
+                self.backward_pass(true)
 
-            self.sgd()
+                self.sgd()
+            
+            avg_loss = total_loss / len(X)
+            epoch_losses["train"].append(avg_loss)
+            print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
 
+            if X_val is not None and y_val is not None:
+                val_loss = np.mean([self.loss_func(self.predict(x), y) 
+                    for x, y in zip(X_val, y_val)])
+                epoch_losses["val"].append(val_loss)
+                print(f"Validation Loss: {val_loss:.4f}")
+        return epoch_losses
 
-    def forward_pass(self, item):
+    def predict(self, item):
         self.layers[0].a_vals = item
         for i in range(1, len(self.layers)):
             prev_layer = self.layers[i-1]
