@@ -17,17 +17,25 @@ class FCN:
             layer.initialize(self.layers[len(self.layers)-1].n)
         self.layers.append(layer)
 
-    def train(self, X, y_true, X_val = None, y_val = None, epochs=10):
+    def train(self, X, y_true, X_val = None, y_val = None, epochs=10, batch_size = 1):
         epoch_losses = {"train": [], "val": []}
         for epoch in range(epochs):
+            iorder = np.random.permutation(len(X))
+            X, y_true = X[iorder], y_true[iorder]
+
             total_loss = 0
-            for item, true in zip(X, y_true):
-                y_pred = self.predict(item)
-                total_loss += self.loss_func(y_pred, true)
 
-                self.backward_pass(true)
+            for i in range(0, len(X), batch_size):
+                self.clear_gradients()
+                X_batch = X[i:i+batch_size]
+                y_batch = y_true[i:i+batch_size]
+                for item, true in zip(X_batch, y_batch):
+                    y_pred = self.predict(item)
+                    total_loss += self.loss_func(y_pred, true)
 
-                self.sgd()
+                    self.backward_pass(true)
+
+                self.sgd(len(X_batch))
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
@@ -58,11 +66,18 @@ class FCN:
 
             dL_dz = layer.derive_z(dL_da)
 
-            layer.dW = np.outer(dL_dz, prev_layer.a_vals)
-            layer.db = dL_dz
+            layer.dW += np.outer(dL_dz, prev_layer.a_vals)
+            layer.db += dL_dz
 
             dL_da = layer.weights.T @ dL_dz
 
+    def clear_gradients(self):
+        for i in range(1, len(self.layers)):
+            layer = self.layers[i]
+        
+            layer.dW = np.zeros_like(layer.dW)
+            layer.db = np.zeros_like(layer.db)
+    
     # loss function code
 
     def mse(self, y_pred, y_true):
@@ -72,9 +87,8 @@ class FCN:
         return 2 * (y_pred - y_true) / len(y_true)
     
     def cross_entropy(self, y_pred, y_true):
-        return -np.sum(y_true * np.log(y_pred))
+        return -np.sum(y_true * np.log(y_pred + 1e-8))
 
-    # TO DO!!!
     def cross_entropy_derivative(self, y_pred, y_true):
         return -(y_true / (y_pred + 1e-8))
 
@@ -96,10 +110,10 @@ class FCN:
 
     # optimizer code
 
-    def sgd(self):
+    def sgd(self, batch_size = 1):
         for layer in self.layers[1:]:
-            layer.weights = layer.weights - (self.learning_rate * layer.dW)
-            layer.biases = layer.biases - (self.learning_rate * layer.db)
+            layer.weights -= self.learning_rate * (layer.dW / batch_size)
+            layer.biases -= self.learning_rate * (layer.db / batch_size)
 
 # layer code
 
@@ -112,14 +126,17 @@ class Layer:
 
     def initialize(self, n_prev):
         self.z_vals = np.empty(self.n)
-        self.weights = np.random.randn(self.n, n_prev) * 0.01
+        self.weights = np.random.randn(self.n, n_prev) * np.sqrt(2 / n_prev)
         self.biases = np.zeros(self.n)
-        self.dW = np.empty((self.n, n_prev))
-        self.db = np.empty(self.n)
+        self.dW = np.zeros((self.n, n_prev))
+        self.db = np.zeros(self.n)
     
     # activation function code
 
     def activation_func(self, data):
+        if self.activation is None:
+            return data
+
         funcs = {
         'relu': self.relu,
         'softmax': self.softmax

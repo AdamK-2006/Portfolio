@@ -16,9 +16,9 @@ def confusion_matrix(model, X, y):
 def plot_losses(losses):
     train = losses["train"]
     val = losses["val"]
-    plt.plot(range(1, len(train) + 1), train, label = "Train")
+    plt.plot(range(1, len(train) + 1), train, label = "Train", marker='o')
     if len(val) > 0:
-        plt.plot(range(1, len(val) + 1), val, label = "Validation")
+        plt.plot(range(1, len(val) + 1), val, label = "Validation", marker='o')
     plt.xticks(range(1, len(train) + 1))
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
