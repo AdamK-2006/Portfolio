@@ -17,9 +17,19 @@ class FCN:
             layer.initialize(self.layers[len(self.layers)-1].n)
         self.layers.append(layer)
 
-    def train(self, X, y_true, X_val = None, y_val = None, epochs=10, batch_size = 1):
+    def train(self, X, y_true, X_val = None, y_val = None, epochs=10, batch_size = 1, patience = 5):
+        best_val_loss = np.inf
+        epochs_without_improvement = 0
+
         epoch_losses = {"train": [], "val": []}
         for epoch in range(epochs):
+            if epochs_without_improvement == patience:
+                # load best weights
+                print("Early stopping executed")
+                for layer in self.layers[1:]:
+                    layer.weights = layer.best_weights.copy()
+                    layer.biases = layer.best_biases.copy()
+                break
             iorder = np.random.permutation(len(X))
             X, y_true = X[iorder], y_true[iorder]
 
@@ -44,6 +54,18 @@ class FCN:
             if X_val is not None and y_val is not None:
                 val_loss = np.mean([self.loss_func(self.predict(x), y) 
                     for x, y in zip(X_val, y_val)])
+            
+                if val_loss < best_val_loss:
+                    # update new best weights and biases
+                    print("Model improved")
+                    best_val_loss = val_loss
+                    epochs_without_improvement = 0
+                    for layer in self.layers[1:]:
+                        layer.best_weights = layer.weights.copy()
+                        layer.best_biases = layer.biases.copy()
+                else:
+                    epochs_without_improvement += 1
+                
                 epoch_losses["val"].append(val_loss)
                 print(f"Validation Loss: {val_loss:.4f}")
         return epoch_losses
@@ -128,6 +150,8 @@ class Layer:
         self.z_vals = np.empty(self.n)
         self.weights = np.random.randn(self.n, n_prev) * np.sqrt(2 / n_prev)
         self.biases = np.zeros(self.n)
+        self.best_weights = np.zeros_like(self.weights)
+        self.best_biases = np.zeros_like(self.biases)
         self.dW = np.zeros((self.n, n_prev))
         self.db = np.zeros(self.n)
     
