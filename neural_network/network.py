@@ -21,43 +21,33 @@ class FCN:
         best_val_loss = np.inf
         epochs_without_improvement = 0
 
-        epoch_losses = {"train": [], "val": []}
+        epoch_losses = {"train": [], "val": [], "val_accuracy": []}
         for epoch in range(epochs):
-            if epochs_without_improvement == patience:
-                # load best weights
-                print("Early stopping executed")
-                for layer in self.layers[1:]:
-                    layer.weights = layer.best_weights.copy()
-                    layer.biases = layer.best_biases.copy()
-                break
             iorder = np.random.permutation(len(X))
             X, y_true = X[iorder], y_true[iorder]
 
             total_loss = 0
 
             for i in range(0, len(X), batch_size):
-                self.clear_gradients()
                 X_batch = X[i:i+batch_size]
                 y_batch = y_true[i:i+batch_size]
-                for item, true in zip(X_batch, y_batch):
-                    y_pred = self.predict(item)
-                    total_loss += self.loss_func(y_pred, true)
+                y_pred = self.predict(X_batch)
+                total_loss += self.loss_func(y_pred, y_batch)
 
-                    self.backward_pass(true)
+                self.backward_pass(y_batch)
 
                 self.sgd(len(X_batch))
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
-            print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
+            
 
             if X_val is not None and y_val is not None:
-                val_loss = np.mean([self.loss_func(self.predict(x), y) 
-                    for x, y in zip(X_val, y_val)])
+                val_loss = self.loss_func(self.predict(X_val), y_val)
             
                 if val_loss < best_val_loss:
                     # update new best weights and biases
-                    print("Model improved")
+                    print("Model improved:")
                     best_val_loss = val_loss
                     epochs_without_improvement = 0
                     for layer in self.layers[1:]:
@@ -67,38 +57,46 @@ class FCN:
                     epochs_without_improvement += 1
                 
                 epoch_losses["val"].append(val_loss)
-                print(f"Validation Loss: {val_loss:.4f}")
+
+                val_preds = np.argmax(self.predict(X_val), axis=1)
+                val_true = np.argmax(y_val, axis=1)
+                val_acc = np.mean(val_preds == val_true) * 100
+                epoch_losses["val_accuracy"].append(val_acc)
+
+                print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f} - Validation Loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.2f}%")
+
+                if epochs_without_improvement == patience:
+                    # load best weights
+                    print("Early stopping executed")
+                    for layer in self.layers[1:]:
+                        layer.weights = layer.best_weights.copy()
+                        layer.biases = layer.best_biases.copy()
+                    break
         return epoch_losses
 
-    def predict(self, item):
-        self.layers[0].a_vals = item
+    def predict(self, X):
+        self.layers[0].a_vals = X
         for i in range(1, len(self.layers)):
             prev_layer = self.layers[i-1]
             layer = self.layers[i]
-            layer.z_vals = layer.weights @ prev_layer.a_vals + layer.biases
+            layer.z_vals = prev_layer.a_vals @ layer.weights.T + layer.biases
             layer.a_vals = layer.activation_func(layer.z_vals)
         return self.layers[-1].a_vals
-    
+
+    #TO DO!!! BATCH VECTORISATION
     def backward_pass(self, y_true):
         dL_da = self.loss_func_derivative(self.layers[-1].a_vals, y_true)
+        # this is of shape (batch_size, neurons)
 
         for i in range(len(self.layers) - 1, 0, -1):
             layer = self.layers[i]
             prev_layer = self.layers[i-1]
 
             dL_dz = layer.derive_z(dL_da)
+            layer.dW = dL_dz.T @ prev_layer.a_vals
+            layer.db = np.sum(dL_dz, axis=0)
 
-            layer.dW += np.outer(dL_dz, prev_layer.a_vals)
-            layer.db += dL_dz
-
-            dL_da = layer.weights.T @ dL_dz
-
-    def clear_gradients(self):
-        for i in range(1, len(self.layers)):
-            layer = self.layers[i]
-        
-            layer.dW = np.zeros_like(layer.dW)
-            layer.db = np.zeros_like(layer.db)
+            dL_da = dL_dz @ layer.weights
     
     # loss function code
 
@@ -106,13 +104,13 @@ class FCN:
         return np.mean(np.square(y_pred - y_true))
     
     def mse_derivative(self, y_pred, y_true):
-        return 2 * (y_pred - y_true) / len(y_true)
+        return 2 * (y_pred - y_true) / y_true.size
     
     def cross_entropy(self, y_pred, y_true):
-        return -np.sum(y_true * np.log(y_pred + 1e-8))
+        return np.mean(-np.sum(y_true * np.log(y_pred + 1e-8), axis=1))
 
     def cross_entropy_derivative(self, y_pred, y_true):
-        return -(y_true / (y_pred + 1e-8))
+        return -(y_true / (y_pred + 1e-8)) / len(y_true)
 
     def loss_func(self, y_pred, y_true):
         funcs = {
@@ -185,7 +183,7 @@ class Layer:
         return (data > 0).astype(float)
     
     def softmax(self, data):
-        e = np.exp(data - np.max(data))
-        return e / e.sum()
+        e = np.exp(data - np.max(data, axis=-1, keepdims=True))
+        return e / e.sum(axis=-1, keepdims=True)
     def softmax_derivative(self, data, dL_da):
-        return data * (dL_da - np.sum(dL_da * data))
+        return data * (dL_da - np.sum(dL_da * data, axis=-1, keepdims=True))

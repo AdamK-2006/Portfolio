@@ -16,15 +16,28 @@ def confusion_matrix(model, X, y):
 def plot_losses(losses):
     train = losses["train"]
     val = losses["val"]
-    plt.plot(range(1, len(train) + 1), train, label = "Train", marker='o')
+    epochs = range(1, len(train) + 1)
+    ticks = range(1, len(train) + 1, len(train)//10)
+
+    plt.plot(epochs, train, label="Train Loss")
     if len(val) > 0:
-        plt.plot(range(1, len(val) + 1), val, label = "Validation", marker='o')
-    plt.xticks(range(1, len(train) + 1))
+        plt.plot(epochs, val, label="Val Loss")
+    plt.xticks(ticks)
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title('Training Loss')
+    plt.title('Training vs Val Loss')
     plt.legend()
     plt.show()
+
+    val_accuracy = losses["val_accuracy"]
+    if len(val_accuracy) > 0:
+        plt.plot(epochs, val_accuracy, label="Val Accuracy")
+        plt.xticks(ticks)
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy (%)')
+        plt.title('Validation Accuracy')
+        plt.legend()
+        plt.show()
 
 def plot_confusion_matrix(matrix):
     plt.figure(figsize=(10, 8))
