@@ -3,18 +3,20 @@ import numpy as np
 # fully connected network code
 
 class FCN:
-    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse"):
+    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse", momentum_coeff = 0.9, epsilon = 1e-8):
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
         self.loss = loss
         self.learning_rate = learning_rate
         self.optimizer = optimizer
+        self.momentum_coeff = momentum_coeff
+        self.epsilon = epsilon
         print("FCN initialized")
 
     def add_layer(self, layer):
         if len(self.layers) > 0:
-            layer.initialize(self.layers[len(self.layers)-1].n)
+            layer.initialize(self.layers[-1].n)
         self.layers.append(layer)
 
     def train(self, X, y_true, X_val = None, y_val = None, epochs=10, batch_size = 1, patience = 5):
@@ -36,14 +38,15 @@ class FCN:
 
                 self.backward_pass(y_batch)
 
-                self.sgd(len(X_batch))
+                self.optimizer_func(len(X_batch))
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
             
 
             if X_val is not None and y_val is not None:
-                val_loss = self.loss_func(self.predict(X_val), y_val)
+                val_pred = self.predict(X_val)
+                val_loss = self.loss_func(val_pred, y_val)
             
                 if val_loss < best_val_loss:
                     # update new best weights and biases
@@ -58,7 +61,7 @@ class FCN:
                 
                 epoch_losses["val"].append(val_loss)
 
-                val_preds = np.argmax(self.predict(X_val), axis=1)
+                val_preds = np.argmax(val_pred, axis=1)
                 val_true = np.argmax(y_val, axis=1)
                 val_acc = np.mean(val_preds == val_true) * 100
                 epoch_losses["val_accuracy"].append(val_acc)
@@ -83,7 +86,6 @@ class FCN:
             layer.a_vals = layer.activation_func(layer.z_vals)
         return self.layers[-1].a_vals
 
-    #TO DO!!! BATCH VECTORISATION
     def backward_pass(self, y_true):
         dL_da = self.loss_func_derivative(self.layers[-1].a_vals, y_true)
         # this is of shape (batch_size, neurons)
@@ -129,11 +131,34 @@ class FCN:
         return funcs[self.loss](y_pred, y_true)
 
     # optimizer code
-
-    def sgd(self, batch_size = 1):
+    
+    def sgd(self, batch_size):
         for layer in self.layers[1:]:
             layer.weights -= self.learning_rate * (layer.dW / batch_size)
             layer.biases -= self.learning_rate * (layer.db / batch_size)
+
+    def sgd_with_momentum(self, batch_size):
+        for layer in self.layers[1:]:
+            layer.vW = self.momentum_coeff * layer.vW + (1-self.momentum_coeff) * (layer.dW / batch_size)
+            layer.vb = self.momentum_coeff * layer.vb + (1-self.momentum_coeff) * (layer.db / batch_size)
+            layer.weights -= self.learning_rate * layer.vW
+            layer.biases -= self.learning_rate * layer.vb
+
+    def rmsprop(self, batch_size):
+        for layer in self.layers[1:]:
+            layer.gW = self.momentum_coeff * layer.gW + (1-self.momentum_coeff) * ((layer.dW / batch_size)**2)
+            layer.gb = self.momentum_coeff * layer.gb + (1-self.momentum_coeff) * ((layer.db / batch_size)**2)
+            layer.weights -= (self.learning_rate / np.sqrt(layer.gW + self.epsilon)) * (layer.dW / batch_size)
+            layer.biases -= (self.learning_rate / np.sqrt(layer.gb + self.epsilon)) * (layer.db / batch_size)
+
+    def optimizer_func(self, batch_size = 1):
+                funcs = {
+                'sgd': self.sgd,
+                'sgd_with_momentum': self.sgd_with_momentum,
+                'rmsprop': self.rmsprop
+                }
+        
+                return funcs[self.optimizer](batch_size)
 
 # layer code
 
@@ -152,6 +177,12 @@ class Layer:
         self.best_biases = np.zeros_like(self.biases)
         self.dW = np.zeros((self.n, n_prev))
         self.db = np.zeros(self.n)
+
+        self.vW = np.zeros((self.n, n_prev))  # momentum velocity
+        self.vb = np.zeros(self.n)
+
+        self.gW = np.zeros((self.n, n_prev))  # rmsprop cache
+        self.gb = np.zeros(self.n)
     
     # activation function code
 

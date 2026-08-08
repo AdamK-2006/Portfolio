@@ -17,7 +17,7 @@ def plot_losses(losses):
     train = losses["train"]
     val = losses["val"]
     epochs = range(1, len(train) + 1)
-    ticks = range(1, len(train) + 1, len(train)//10)
+    ticks = range(1, len(train) + 1, len(train)//10 + 1)
 
     plt.plot(epochs, train, label="Train Loss")
     if len(val) > 0:
