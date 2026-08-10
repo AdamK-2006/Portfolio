@@ -3,14 +3,15 @@ import numpy as np
 # fully connected network code
 
 class FCN:
-    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse", momentum_coeff = 0.9, epsilon = 1e-8):
+    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse", first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.99, epsilon = 1e-8):
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
         self.loss = loss
         self.learning_rate = learning_rate
         self.optimizer = optimizer
-        self.momentum_coeff = momentum_coeff
+        self.first_moment_decay_rate = first_moment_decay_rate
+        self.second_moment_decay_rate = second_moment_decay_rate
         self.epsilon = epsilon
         print("FCN initialized")
 
@@ -20,6 +21,7 @@ class FCN:
         self.layers.append(layer)
 
     def train(self, X, y_true, X_val = None, y_val = None, epochs=10, batch_size = 1, patience = 5):
+        self.updates = 1
         best_val_loss = np.inf
         epochs_without_improvement = 0
 
@@ -39,6 +41,7 @@ class FCN:
                 self.backward_pass(y_batch)
 
                 self.optimizer_func(len(X_batch))
+                self.updates += 1
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
@@ -134,30 +137,54 @@ class FCN:
     
     def sgd(self, batch_size):
         for layer in self.layers[1:]:
-            layer.weights -= self.learning_rate * (layer.dW / batch_size)
-            layer.biases -= self.learning_rate * (layer.db / batch_size)
+            avg_dW = layer.dW / batch_size
+            avg_db = layer.db / batch_size
+            layer.weights -= self.learning_rate * avg_dW
+            layer.biases -= self.learning_rate * avg_db
 
     def sgd_with_momentum(self, batch_size):
         for layer in self.layers[1:]:
-            layer.vW = self.momentum_coeff * layer.vW + (1-self.momentum_coeff) * (layer.dW / batch_size)
-            layer.vb = self.momentum_coeff * layer.vb + (1-self.momentum_coeff) * (layer.db / batch_size)
+            avg_dW = layer.dW / batch_size
+            avg_db = layer.db / batch_size
+            layer.vW = self.first_moment_decay_rate * layer.vW + (1-self.first_moment_decay_rate) * avg_dW
+            layer.vb = self.first_moment_decay_rate * layer.vb + (1-self.first_moment_decay_rate) * avg_db
             layer.weights -= self.learning_rate * layer.vW
             layer.biases -= self.learning_rate * layer.vb
 
     def rmsprop(self, batch_size):
         for layer in self.layers[1:]:
-            layer.gW = self.momentum_coeff * layer.gW + (1-self.momentum_coeff) * ((layer.dW / batch_size)**2)
-            layer.gb = self.momentum_coeff * layer.gb + (1-self.momentum_coeff) * ((layer.db / batch_size)**2)
-            layer.weights -= (self.learning_rate / np.sqrt(layer.gW + self.epsilon)) * (layer.dW / batch_size)
-            layer.biases -= (self.learning_rate / np.sqrt(layer.gb + self.epsilon)) * (layer.db / batch_size)
+            avg_dW = layer.dW / batch_size
+            avg_db = layer.db / batch_size
+            layer.gW = self.second_moment_decay_rate * layer.gW + (1-self.second_moment_decay_rate) * (avg_dW**2)
+            layer.gb = self.second_moment_decay_rate * layer.gb + (1-self.second_moment_decay_rate) * (avg_db**2)
+            layer.weights -= (self.learning_rate / np.sqrt(layer.gW + self.epsilon)) * avg_dW
+            layer.biases -= (self.learning_rate / np.sqrt(layer.gb + self.epsilon)) * avg_db
+
+    def adam(self, batch_size):
+        for layer in self.layers[1:]:
+            avg_dW = layer.dW / batch_size
+            layer.vW = self.first_moment_decay_rate * layer.vW + (1-self.first_moment_decay_rate) * avg_dW
+            v_hatW = layer.vW / (1-(self.first_moment_decay_rate**self.updates))
+            layer.gW = self.second_moment_decay_rate * layer.gW + (1-self.second_moment_decay_rate) * (avg_dW**2)
+            g_hatW = layer.gW / (1-(self.second_moment_decay_rate**self.updates))
+            layer.weights -= (self.learning_rate * v_hatW / np.sqrt(g_hatW + self.epsilon))
+
+            avg_db = layer.db / batch_size
+            layer.vb = self.first_moment_decay_rate * layer.vb + (1-self.first_moment_decay_rate) * avg_db
+            v_hatb = layer.vb / (1-(self.first_moment_decay_rate**self.updates))
+            layer.gb = self.second_moment_decay_rate * layer.gb + (1-self.second_moment_decay_rate) * (avg_db**2)
+            g_hatb = layer.gb / (1-(self.second_moment_decay_rate**self.updates))
+            layer.biases -= (self.learning_rate * v_hatb / np.sqrt(g_hatb + self.epsilon))
+        
 
     def optimizer_func(self, batch_size = 1):
                 funcs = {
                 'sgd': self.sgd,
                 'sgd_with_momentum': self.sgd_with_momentum,
-                'rmsprop': self.rmsprop
+                'rmsprop': self.rmsprop,
+                'adam': self.adam
                 }
-        
+
                 return funcs[self.optimizer](batch_size)
 
 # layer code
