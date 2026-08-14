@@ -3,7 +3,7 @@ import numpy as np
 # fully connected network code
 
 class FCN:
-    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse", first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.99, epsilon = 1e-8):
+    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse", first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.999, epsilon = 1e-8):
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
@@ -46,14 +46,14 @@ class FCN:
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
             
-
+            print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
             if X_val is not None and y_val is not None:
                 val_pred = self.predict(X_val)
                 val_loss = self.loss_func(val_pred, y_val)
             
                 if val_loss < best_val_loss:
                     # update new best weights and biases
-                    print("Model improved:")
+                    print("Model improved!")
                     best_val_loss = val_loss
                     epochs_without_improvement = 0
                     for layer in self.layers[1:]:
@@ -69,7 +69,7 @@ class FCN:
                 val_acc = np.mean(val_preds == val_true) * 100
                 epoch_losses["val_accuracy"].append(val_acc)
 
-                print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f} - Validation Loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.2f}%")
+                print(f"Validation Loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.2f}%")
 
                 if epochs_without_improvement == patience:
                     # load best weights
@@ -78,6 +78,7 @@ class FCN:
                         layer.weights = layer.best_weights.copy()
                         layer.biases = layer.best_biases.copy()
                     break
+            print("...")
         return epoch_losses
 
     def predict(self, X):
@@ -135,14 +136,14 @@ class FCN:
 
     # optimizer code
     
-    def sgd(self, batch_size):
+    def __sgd(self, batch_size):
         for layer in self.layers[1:]:
             avg_dW = layer.dW / batch_size
             avg_db = layer.db / batch_size
             layer.weights -= self.learning_rate * avg_dW
             layer.biases -= self.learning_rate * avg_db
 
-    def sgd_with_momentum(self, batch_size):
+    def __sgd_with_momentum(self, batch_size):
         for layer in self.layers[1:]:
             avg_dW = layer.dW / batch_size
             avg_db = layer.db / batch_size
@@ -151,7 +152,7 @@ class FCN:
             layer.weights -= self.learning_rate * layer.vW
             layer.biases -= self.learning_rate * layer.vb
 
-    def rmsprop(self, batch_size):
+    def __rmsprop(self, batch_size):
         for layer in self.layers[1:]:
             avg_dW = layer.dW / batch_size
             avg_db = layer.db / batch_size
@@ -160,7 +161,7 @@ class FCN:
             layer.weights -= (self.learning_rate / np.sqrt(layer.gW + self.epsilon)) * avg_dW
             layer.biases -= (self.learning_rate / np.sqrt(layer.gb + self.epsilon)) * avg_db
 
-    def adam(self, batch_size):
+    def __adam(self, batch_size):
         for layer in self.layers[1:]:
             avg_dW = layer.dW / batch_size
             layer.vW = self.first_moment_decay_rate * layer.vW + (1-self.first_moment_decay_rate) * avg_dW
@@ -177,7 +178,7 @@ class FCN:
             layer.biases -= (self.learning_rate * v_hatb / np.sqrt(g_hatb + self.epsilon))
         
 
-    def optimizer_func(self, batch_size = 1):
+    def __optimizer_func(self, batch_size = 1):
                 funcs = {
                 'sgd': self.sgd,
                 'sgd_with_momentum': self.sgd_with_momentum,
@@ -227,7 +228,6 @@ class Layer:
     def derive_z(self, dL_da):
         funcs = {
         'relu': self.relu_derivative,
-        'softmax': self.softmax_derivative
         }
 
         if self.activation == 'softmax':
