@@ -2,15 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def accuracy(model, X, y):
-    correct = sum(np.argmax(model.predict(x)) == np.argmax(y) 
-                  for x, y in zip(X, y))
-    return correct / len(X) * 100
+    preds = np.argmax(model.predict(X), axis=1)
+    trues = np.argmax(y, axis=1)
+    return np.mean(preds == trues) * 100
 
 def confusion_matrix(model, X, y):
     matrix = np.zeros((10, 10), dtype=int)
-    for x, true in zip(X, y):
-        pred = np.argmax(model.predict(x))
-        matrix[np.argmax(true)][pred] += 1
+    preds = np.argmax(model.predict(X), axis=1)
+    trues = np.argmax(y, axis=1)
+    for pred, true in zip(preds, trues):
+        matrix[true][pred] += 1
     return matrix
 
 def plot_losses(losses):

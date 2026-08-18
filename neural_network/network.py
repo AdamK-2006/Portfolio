@@ -1,18 +1,36 @@
 import numpy as np
+from activations import *
+from losses import *
+from optimisers import *
 
 # fully connected network code
 
 class FCN:
-    def __init__(self, layers, optimizer = "sgd", learning_rate = 0.01, loss = "mse", first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.999, epsilon = 1e-8):
+    def __init__(self, layers, optimiser = "sgd", learning_rate = 0.01, loss = "mse", first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.999, epsilon = 1e-8):
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
-        self.loss = loss
-        self.learning_rate = learning_rate
-        self.optimizer = optimizer
-        self.first_moment_decay_rate = first_moment_decay_rate
-        self.second_moment_decay_rate = second_moment_decay_rate
-        self.epsilon = epsilon
+
+        if loss is None:
+            self.loss = None
+        else:
+            funcs = {
+                'mse': MSE,
+                'cross_entropy': Cross_Entropy
+            }
+            self.loss = funcs[loss]()
+
+        if optimiser is None:
+            self.optimiser = None
+        else:
+            optimisers = {
+                'sgd': SGD,
+                'sgd_with_momentum': SGD_With_Momentum,
+                'rmsprop': RMSProp,
+                'adam': Adam
+            }
+            self.optimiser = optimisers[optimiser](learning_rate, first_moment_decay_rate, second_moment_decay_rate, epsilon)
+
         print("FCN initialized")
 
     def add_layer(self, layer):
@@ -21,7 +39,6 @@ class FCN:
         self.layers.append(layer)
 
     def train(self, X, y_true, X_val = None, y_val = None, epochs=10, batch_size = 1, patience = 5):
-        self.updates = 1
         best_val_loss = np.inf
         epochs_without_improvement = 0
 
@@ -36,12 +53,11 @@ class FCN:
                 X_batch = X[i:i+batch_size]
                 y_batch = y_true[i:i+batch_size]
                 y_pred = self.predict(X_batch)
-                total_loss += self.loss_func(y_pred, y_batch)
+                total_loss += self.loss.func(y_pred, y_batch)
 
                 self.backward_pass(y_batch)
 
-                self.optimizer_func(len(X_batch))
-                self.updates += 1
+                self.optimiser.func(self.layers[1:], len(X_batch))
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
@@ -49,7 +65,7 @@ class FCN:
             print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
             if X_val is not None and y_val is not None:
                 val_pred = self.predict(X_val)
-                val_loss = self.loss_func(val_pred, y_val)
+                val_loss = self.loss.func(val_pred, y_val)
             
                 if val_loss < best_val_loss:
                     # update new best weights and biases
@@ -87,11 +103,11 @@ class FCN:
             prev_layer = self.layers[i-1]
             layer = self.layers[i]
             layer.z_vals = prev_layer.a_vals @ layer.weights.T + layer.biases
-            layer.a_vals = layer.activation_func(layer.z_vals)
+            layer.a_vals = layer.activation.func(layer.z_vals)
         return self.layers[-1].a_vals
 
     def backward_pass(self, y_true):
-        dL_da = self.loss_func_derivative(self.layers[-1].a_vals, y_true)
+        dL_da = self.loss.derive_func(self.layers[-1].a_vals, y_true)
         # this is of shape (batch_size, neurons)
 
         for i in range(len(self.layers) - 1, 0, -1):
@@ -103,90 +119,6 @@ class FCN:
             layer.db = np.sum(dL_dz, axis=0)
 
             dL_da = dL_dz @ layer.weights
-    
-    # loss function code
-
-    def mse(self, y_pred, y_true):
-        return np.mean(np.square(y_pred - y_true))
-    
-    def mse_derivative(self, y_pred, y_true):
-        return 2 * (y_pred - y_true) / y_true.size
-    
-    def cross_entropy(self, y_pred, y_true):
-        return np.mean(-np.sum(y_true * np.log(y_pred + 1e-8), axis=1))
-
-    def cross_entropy_derivative(self, y_pred, y_true):
-        return -(y_true / (y_pred + 1e-8)) / len(y_true)
-
-    def loss_func(self, y_pred, y_true):
-        funcs = {
-        'mse': self.mse,
-        'cross_entropy': self.cross_entropy
-        }
-
-        return funcs[self.loss](y_pred, y_true)
-    
-    def loss_func_derivative(self, y_pred, y_true):
-        funcs = {
-        'mse': self.mse_derivative,
-        'cross_entropy': self.cross_entropy_derivative
-        }
-
-        return funcs[self.loss](y_pred, y_true)
-
-    # optimizer code
-    
-    def __sgd(self, batch_size):
-        for layer in self.layers[1:]:
-            avg_dW = layer.dW / batch_size
-            avg_db = layer.db / batch_size
-            layer.weights -= self.learning_rate * avg_dW
-            layer.biases -= self.learning_rate * avg_db
-
-    def __sgd_with_momentum(self, batch_size):
-        for layer in self.layers[1:]:
-            avg_dW = layer.dW / batch_size
-            avg_db = layer.db / batch_size
-            layer.vW = self.first_moment_decay_rate * layer.vW + (1-self.first_moment_decay_rate) * avg_dW
-            layer.vb = self.first_moment_decay_rate * layer.vb + (1-self.first_moment_decay_rate) * avg_db
-            layer.weights -= self.learning_rate * layer.vW
-            layer.biases -= self.learning_rate * layer.vb
-
-    def __rmsprop(self, batch_size):
-        for layer in self.layers[1:]:
-            avg_dW = layer.dW / batch_size
-            avg_db = layer.db / batch_size
-            layer.gW = self.second_moment_decay_rate * layer.gW + (1-self.second_moment_decay_rate) * (avg_dW**2)
-            layer.gb = self.second_moment_decay_rate * layer.gb + (1-self.second_moment_decay_rate) * (avg_db**2)
-            layer.weights -= (self.learning_rate / np.sqrt(layer.gW + self.epsilon)) * avg_dW
-            layer.biases -= (self.learning_rate / np.sqrt(layer.gb + self.epsilon)) * avg_db
-
-    def __adam(self, batch_size):
-        for layer in self.layers[1:]:
-            avg_dW = layer.dW / batch_size
-            layer.vW = self.first_moment_decay_rate * layer.vW + (1-self.first_moment_decay_rate) * avg_dW
-            v_hatW = layer.vW / (1-(self.first_moment_decay_rate**self.updates))
-            layer.gW = self.second_moment_decay_rate * layer.gW + (1-self.second_moment_decay_rate) * (avg_dW**2)
-            g_hatW = layer.gW / (1-(self.second_moment_decay_rate**self.updates))
-            layer.weights -= (self.learning_rate * v_hatW / np.sqrt(g_hatW + self.epsilon))
-
-            avg_db = layer.db / batch_size
-            layer.vb = self.first_moment_decay_rate * layer.vb + (1-self.first_moment_decay_rate) * avg_db
-            v_hatb = layer.vb / (1-(self.first_moment_decay_rate**self.updates))
-            layer.gb = self.second_moment_decay_rate * layer.gb + (1-self.second_moment_decay_rate) * (avg_db**2)
-            g_hatb = layer.gb / (1-(self.second_moment_decay_rate**self.updates))
-            layer.biases -= (self.learning_rate * v_hatb / np.sqrt(g_hatb + self.epsilon))
-        
-
-    def __optimizer_func(self, batch_size = 1):
-                funcs = {
-                'sgd': self.sgd,
-                'sgd_with_momentum': self.sgd_with_momentum,
-                'rmsprop': self.rmsprop,
-                'adam': self.adam
-                }
-
-                return funcs[self.optimizer](batch_size)
 
 # layer code
 
@@ -195,7 +127,13 @@ class Layer:
         # Layer initialized with array of activations, neuron count and activation function name
         self.n = neurons
         self.a_vals = np.empty(neurons)
-        self.activation = activation
+        if activation is None:
+            self.activation = None
+        else:
+            funcs = {
+                'relu': ReLu, 'softmax': Softmax
+            }
+            self.activation = funcs[activation]()
 
     def initialize(self, n_prev):
         self.z_vals = np.empty(self.n)
@@ -213,35 +151,10 @@ class Layer:
         self.gb = np.zeros(self.n)
     
     # activation function code
-
-    def activation_func(self, data):
-        if self.activation is None:
-            return data
-
-        funcs = {
-        'relu': self.relu,
-        'softmax': self.softmax
-        }
-
-        return funcs[self.activation](data)
     
     def derive_z(self, dL_da):
-        funcs = {
-        'relu': self.relu_derivative,
-        }
-
-        if self.activation == 'softmax':
-            return self.softmax_derivative(self.a_vals, dL_da)
-        
-        return dL_da * funcs[self.activation](self.z_vals)
-    
-    def relu(self, data):
-        return np.maximum(0, data)
-    def relu_derivative(self, data):
-        return (data > 0).astype(float)
-    
-    def softmax(self, data):
-        e = np.exp(data - np.max(data, axis=-1, keepdims=True))
-        return e / e.sum(axis=-1, keepdims=True)
-    def softmax_derivative(self, data, dL_da):
-        return data * (dL_da - np.sum(dL_da * data, axis=-1, keepdims=True))
+        if self.activation is None:
+            return dL_da
+        if isinstance(self.activation, Softmax):
+            return self.activation.derive_func(dL_da)
+        return dL_da * self.activation.derive_func(self.z_vals)
