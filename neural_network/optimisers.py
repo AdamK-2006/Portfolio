@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
+# Abstract class
 class Optimiser(ABC):
     @abstractmethod
     def __init__(self, learning_rate, first_moment_decay_rate, second_moment_decay_rate, epsilon):
@@ -10,6 +11,8 @@ class Optimiser(ABC):
     def func(self, layers, batch_size):
         # apply optimiser func to network
         pass
+
+# Implementations
 
 class SGD(Optimiser):
     def __init__(self, learning_rate, first_moment_decay_rate, second_moment_decay_rate, epsilon):
@@ -23,7 +26,7 @@ class SGD(Optimiser):
             layer.weights -= self.learning_rate * avg_dW
             layer.biases -= self.learning_rate * avg_db
 
-class SGD_With_Momentum(Optimiser):
+class SGDWithMomentum(Optimiser):
     def __init__(self, learning_rate, first_moment_decay_rate, second_moment_decay_rate, epsilon):
         self.learning_rate = learning_rate
         self.first_moment_decay_rate = first_moment_decay_rate

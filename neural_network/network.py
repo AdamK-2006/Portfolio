@@ -6,7 +6,7 @@ from optimisers import *
 # fully connected network code
 
 class FCN:
-    def __init__(self, layers, optimiser = "sgd", learning_rate = 0.01, loss = "mse", first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.999, epsilon = 1e-8):
+    def __init__(self, layers, optimiser = "sgd", learning_rate = 0.01, loss = "mse", delta = 1.0, first_moment_decay_rate = 0.9, second_moment_decay_rate = 0.999, epsilon = 1e-8):
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
@@ -16,16 +16,18 @@ class FCN:
         else:
             funcs = {
                 'mse': MSE,
-                'cross_entropy': Cross_Entropy
+                'mae': MAE,
+                'huber': Huber,
+                'cross_entropy': CrossEntropy
             }
-            self.loss = funcs[loss]()
+            self.loss = funcs[loss](delta)
 
         if optimiser is None:
             self.optimiser = None
         else:
             optimisers = {
                 'sgd': SGD,
-                'sgd_with_momentum': SGD_With_Momentum,
+                'sgd_with_momentum': SGDWithMomentum,
                 'rmsprop': RMSProp,
                 'adam': Adam
             }
@@ -131,7 +133,11 @@ class Layer:
             self.activation = None
         else:
             funcs = {
-                'relu': ReLu, 'softmax': Softmax
+                'relu': ReLu, 
+                'softmax': Softmax, 
+                'sigmoid': Sigmoid,
+                'tanh': Tanh,
+                'leaky_relu': LeakyReLu
             }
             self.activation = funcs[activation]()
 
