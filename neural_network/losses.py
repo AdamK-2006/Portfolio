@@ -43,6 +43,7 @@ class Huber(Loss):
     def __init__(self, delta=1.0):
         self.delta = delta
 
+    # func must be called before derive_func in every instance as self.is_small carries between functions
     def func(self, y_pred, y_true):
         diff = y_pred - y_true
         self.is_small = np.abs(diff) <= self.delta
@@ -64,3 +65,13 @@ class CrossEntropy(Loss):
 
     def derive_func(self, y_pred, y_true):
         return -(y_true / (y_pred + 1e-8)) / len(y_true)
+
+class KLDivergence(Loss):
+    def __init__(self, delta):
+            pass
+    
+    def func(self, y_pred, y_true):
+        return np.mean(np.sum(y_true * (np.log(y_true + 1e-8) - np.log(y_pred + 1e-8)), axis=1))
+
+    def derive_func(self, y_pred, y_true):
+         return -(y_true / (y_pred + 1e-8)) / len(y_true)

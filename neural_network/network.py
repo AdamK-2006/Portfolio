@@ -18,7 +18,8 @@ class FCN:
                 'mse': MSE,
                 'mae': MAE,
                 'huber': Huber,
-                'cross_entropy': CrossEntropy
+                'cross_entropy': CrossEntropy,
+                'kl_divergence': KLDivergence
             }
             self.loss = funcs[loss](delta)
 
@@ -105,7 +106,7 @@ class FCN:
             prev_layer = self.layers[i-1]
             layer = self.layers[i]
             layer.z_vals = prev_layer.a_vals @ layer.weights.T + layer.biases
-            layer.a_vals = layer.activation.func(layer.z_vals)
+            layer.a_vals = layer.activation.func(layer.z_vals) if layer.activation else layer.z_vals
         return self.layers[-1].a_vals
 
     def backward_pass(self, y_true):

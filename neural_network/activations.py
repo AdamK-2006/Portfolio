@@ -48,6 +48,8 @@ class Tanh(Activation):
 # Output layer activations
 
 class Softmax(Activation):
+
+    # func must be called before derive_func in every instance as self.output carries between functions
     def func(self, data):
         e = np.exp(data - np.max(data, axis=-1, keepdims=True))
         self.output = e / e.sum(axis=-1, keepdims=True)
