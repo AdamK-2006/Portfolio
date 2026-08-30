@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from activations import *
 from losses import *
 from optimisers import *
@@ -122,6 +123,40 @@ class FCN:
             layer.db = np.sum(dL_dz, axis=0)
 
             dL_da = dL_dz @ layer.weights
+
+    def save(self, filename):
+        os.makedirs("models", exist_ok=True)
+        result = {}
+        for i, layer in enumerate(self.layers[1:]):
+            result[f"w{i}"] = layer.weights
+            result[f"b{i}"] = layer.biases
+        np.savez("models/"+filename, **result)
+    
+    def load(self, filename):
+        if not filename.endswith('.npz'):
+            filename += '.npz'
+
+        try:
+            with np.load("models/"+filename) as data:
+                # check if sizes match
+                if len([k for k in data.keys() if k.startswith('w')]) != len(self.layers) - 1:
+                    print("Model architecture is not compatible with save file")
+                    return
+        
+                for i, layer in enumerate(self.layers[1:]):
+                    if layer.weights.shape != data[f"w{i}"].shape:
+                        print("Model architecture is not compatible with save file")
+                        return
+                
+                for i, layer in enumerate(self.layers[1:]):
+                    layer.weights = data[f"w{i}"]
+                    layer.biases = data[f"b{i}"]
+
+                print("Model Loaded")
+        except OSError:
+            print("Error finding file")
+        except Exception as e:
+            print(f"Error reading file: {e}")
 
 # layer code
 

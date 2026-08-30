@@ -64,6 +64,7 @@ class Adam(Optimiser):
         self.first_moment_decay_rate = first_moment_decay_rate
         self.second_moment_decay_rate = second_moment_decay_rate
         self.epsilon = epsilon
+        # need to check if this must be saved
         self.updates = 1
 
     def func(self, layers, batch_size):
