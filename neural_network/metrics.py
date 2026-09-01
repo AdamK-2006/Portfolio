@@ -6,6 +6,25 @@ def accuracy(model, X, y):
     trues = np.argmax(y, axis=1)
     return np.mean(preds == trues) * 100
 
+def show_misclassified(model, X, y):
+    preds = np.argmax(model.predict(X), axis=1)
+    trues = np.argmax(y, axis=1)
+    misclassified = np.where(preds != trues)[0]
+    np.random.shuffle(misclassified)
+
+    n = min(25, len(misclassified))
+    fig, axes = plt.subplots(5, 5, figsize=(10, 10))
+    for i, ax in enumerate(axes.flatten()):
+        if i >= n:
+            ax.axis('off')
+            continue
+        idx = misclassified[i]
+        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+        ax.set_title(f"True:{trues[idx]} Pred:{preds[idx]}", fontsize=8)
+        ax.axis('off')
+    plt.tight_layout()
+    plt.show()
+
 def confusion_matrix(model, X, y):
     matrix = np.zeros((10, 10), dtype=int)
     preds = np.argmax(model.predict(X), axis=1)
