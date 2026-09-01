@@ -35,6 +35,7 @@ class FCN:
             }
             self.optimiser = optimisers[optimiser](learning_rate, first_moment_decay_rate, second_moment_decay_rate, epsilon)
 
+        self.training = False
         print("FCN initialized")
 
     def add_layer(self, layer):
@@ -48,6 +49,7 @@ class FCN:
 
         epoch_losses = {"train": [], "val": [], "val_accuracy": []}
         for epoch in range(epochs):
+            self.training = True
             iorder = np.random.permutation(len(X))
             X, y_true = X[iorder], y_true[iorder]
 
@@ -65,6 +67,7 @@ class FCN:
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
+            self.training = False
             
             print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
             if X_val is not None and y_val is not None:
@@ -103,11 +106,18 @@ class FCN:
 
     def predict(self, X):
         self.layers[0].a_vals = X
+        # apply dropout to input layer, this is unusual behaviour but I understand it can still be optional
+        if self.training:
+            self.layers[0].apply_dropout()
         for i in range(1, len(self.layers)):
             prev_layer = self.layers[i-1]
             layer = self.layers[i]
             layer.z_vals = prev_layer.a_vals @ layer.weights.T + layer.biases
             layer.a_vals = layer.activation.func(layer.z_vals) if layer.activation else layer.z_vals
+
+            # apply dropout to all layers except output
+            if self.training and i < len(self.layers) - 1:
+                layer.apply_dropout()
         return self.layers[-1].a_vals
 
     def backward_pass(self, y_true):
@@ -123,10 +133,13 @@ class FCN:
             layer.db = np.sum(dL_dz, axis=0)
 
             dL_da = dL_dz @ layer.weights
+            dL_da = dL_da * prev_layer.dropout_mask
 
     def save(self, filename):
         os.makedirs("models", exist_ok=True)
         result = {}
+
+        # saves each weight and bias with keys in the form w0, b0, w1, b1, ...
         for i, layer in enumerate(self.layers[1:]):
             result[f"w{i}"] = layer.weights
             result[f"b{i}"] = layer.biases
@@ -161,10 +174,11 @@ class FCN:
 # layer code
 
 class Layer:
-    def __init__(self, neurons, activation = None):
+    def __init__(self, neurons, activation = None, dropout = 0):
         # Layer initialized with array of activations, neuron count and activation function name
         self.n = neurons
         self.a_vals = np.empty(neurons)
+        self.dropout_rate = dropout
         if activation is None:
             self.activation = None
         else:
@@ -200,3 +214,10 @@ class Layer:
         if isinstance(self.activation, Softmax):
             return self.activation.derive_func(dL_da)
         return dL_da * self.activation.derive_func(self.z_vals)
+
+    def apply_dropout(self):
+        if self.dropout_rate == 0:
+            self.dropout_mask = np.ones(self.a_vals.shape)
+        else:
+            self.dropout_mask = np.random.rand(*self.a_vals.shape) > self.dropout_rate
+            self.a_vals = self.a_vals * self.dropout_mask / (1 - self.dropout_rate)
