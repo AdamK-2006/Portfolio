@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from tqdm import tqdm
 from activations import *
 from losses import *
 from optimisers import *
@@ -55,28 +56,28 @@ class FCN:
 
             total_loss = 0
 
-            for i in range(0, len(X), batch_size):
+            progress_bar = tqdm(range(0, len(X), batch_size), desc=f"Epoch {epoch+1}/{epochs}")
+            for i in progress_bar:
                 X_batch = X[i:i+batch_size]
                 y_batch = y_true[i:i+batch_size]
                 y_pred = self.predict(X_batch)
                 total_loss += self.loss.func(y_pred, y_batch)
 
                 self.backward_pass(y_batch)
-
                 self.optimiser.func(self.layers[1:], len(X_batch))
             
             avg_loss = total_loss / len(X)
             epoch_losses["train"].append(avg_loss)
             self.training = False
-            
-            print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
+
+            tqdm.write(f"Loss: {avg_loss:.4f}")
             if X_val is not None and y_val is not None:
                 val_pred = self.predict(X_val)
                 val_loss = self.loss.func(val_pred, y_val)
             
                 if val_loss < best_val_loss:
                     # update new best weights and biases
-                    print("Model improved!")
+                    tqdm.write("Model improved!")
                     best_val_loss = val_loss
                     epochs_without_improvement = 0
                     for layer in self.layers[1:]:
@@ -92,7 +93,7 @@ class FCN:
                 val_acc = np.mean(val_preds == val_true) * 100
                 epoch_losses["val_accuracy"].append(val_acc)
 
-                print(f"Validation Loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.2f}%")
+                tqdm.write(f"Validation Loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.2f}%")
 
                 if epochs_without_improvement == patience:
                     # load best weights
@@ -101,7 +102,7 @@ class FCN:
                         layer.weights = layer.best_weights.copy()
                         layer.biases = layer.best_biases.copy()
                     break
-            print("...")
+            tqdm.write("...")
         return epoch_losses
 
     def predict(self, X):
