@@ -12,7 +12,6 @@ class FCN:
         self.layers = []
         for layer in layers:
             self.add_layer(layer)
-
         if loss is None:
             self.loss = None
         else:
@@ -21,7 +20,8 @@ class FCN:
                 'mae': MAE,
                 'huber': Huber,
                 'cross_entropy': CrossEntropy,
-                'kl_divergence': KLDivergence
+                'kl_divergence': KLDivergence,
+                'softmax_cross_entropy': SoftmaxCrossEntropy
             }
             self.loss = funcs[loss](delta)
 
@@ -129,7 +129,10 @@ class FCN:
             layer = self.layers[i]
             prev_layer = self.layers[i-1]
 
-            dL_dz = layer.derive_z(dL_da)
+            if  i == len(self.layers) - 1 and self.loss.combined:
+                dL_dz = dL_da
+            else:
+                dL_dz = layer.derive_z(dL_da)
             layer.dW = dL_dz.T @ prev_layer.a_vals
             layer.db = np.sum(dL_dz, axis=0)
 

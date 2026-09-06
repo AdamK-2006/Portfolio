@@ -4,6 +4,7 @@ import numpy as np
 # Abstract class
 
 class Loss(ABC):
+    combined = False
     @abstractmethod
     def __init__(self, delta):
         # initialisation func
@@ -65,6 +66,17 @@ class CrossEntropy(Loss):
 
     def derive_func(self, y_pred, y_true):
         return -(y_true / (y_pred + 1e-8)) / len(y_true)
+
+class SoftmaxCrossEntropy(Loss):
+    combined = True
+    def __init__(self, delta):
+        pass
+    def func(self, y_pred, y_true):
+        return np.mean(-np.sum(y_true * np.log(y_pred + 1e-8), axis=1))
+    
+    def derive_func(self, y_pred, y_true):
+        # skips softmax jacobian
+        return (y_pred - y_true) / len(y_true)
 
 class KLDivergence(Loss):
     def __init__(self, delta):
